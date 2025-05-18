@@ -14,7 +14,7 @@ export default {
       if (cm && cm.injectComponent) {
         const AIButton = lazy(() => import('./components/AIButton'));
         
-        cm.injectComponent('editView', 'right-links', {
+        cm.injectComponent('listView', 'actions', {
           name: 'ai-button',
           Component: () => (
             <Suspense fallback={null}>

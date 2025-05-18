@@ -63,8 +63,8 @@ const AIButton: React.FC = () => {
     <>
       <Modal.Root>
         <Modal.Trigger>
-          <Button startIcon={<Alien />} style={{ width: "100%" }}>
-            Generate AI
+          <Button startIcon={<Alien />} >
+            Create with AI
           </Button>
         </Modal.Trigger>
         <Modal.Content>
