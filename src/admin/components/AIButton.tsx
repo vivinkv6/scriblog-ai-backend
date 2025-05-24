@@ -21,11 +21,14 @@ const AIButton: React.FC = () => {
   const { model } = useContentManagerContext();
   console.log({ model });
   const [prompt, setPrompt] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isEnhancing, setIsEnhancing] = useState<boolean>(false);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
+  const [isOpen, setIsOpen] = useState<boolean>(false);
 
   const enhancedPrompt = async (prompt: string) => {
-    setIsLoading(true);
+    setIsEnhancing(true);
     try {
       console.log({ prompt });
 
@@ -38,15 +41,15 @@ const AIButton: React.FC = () => {
       );
       console.log({generateUpdatedPrompt:generateUpdatedPrompt?.data});
       
-      const extractMessage =generateUpdatedPrompt?.data;
+      const extractMessage =generateUpdatedPrompt?.data?.data;
       console.log({extractMessage});
+
+      setPrompt(extractMessage);
       
       if (!extractMessage) {
         setError(generateUpdatedPrompt.data);
         return;
       }
-
-      // setPrompt(JSON.parse(generateUpdatedPrompt.data?.data)?.message);
     } catch (error: any) {
       setError(error?.message);
       setTimeout(() => {
@@ -54,15 +57,44 @@ const AIButton: React.FC = () => {
       }, 5000);
       throw new Error(error);
     } finally {
-      setIsLoading(false);
+      setIsEnhancing(false);
     }
   };
+
+  const generateBlog = async () => {
+    try {
+      setIsGenerating(true);
+      const data = {
+        prompt: prompt
+      };
+      const response = await axios.post('/api/blog/generate', data);
+      if (response.data) {
+        console.log('Generated blog:', response.data?.data);
+        setSuccess('Blog Created Successfully');
+        setTimeout(() => {
+          setSuccess('');
+          setIsOpen(false);
+        }, 3000);
+
+        window.location.reload();
+      } else {
+        setError('Failed to generate blog');
+      }
+    } catch (error: any) {
+      setError(error?.message || 'An error occurred');
+      setTimeout(() => {
+        setError('');
+      }, 5000);
+    } finally {
+      setIsGenerating(false);
+    }
+  }
 
   if (model !== "api::blog.blog") return null;
   return (
     <>
-      <Modal.Root>
-        <Modal.Trigger>
+      <Modal.Root open={isOpen} defaultOpen={false}  onOpenChange={()=>setIsOpen(!isOpen)}>
+        <Modal.Trigger onClick={() => setIsOpen(true)}>
           <Button startIcon={<Alien />} >
             Create with AI
           </Button>
@@ -80,10 +112,10 @@ const AIButton: React.FC = () => {
                 value={prompt}
                 required
                 onChange={(e) => setPrompt(e.target.value)}
-                disabled={isLoading}
+                disabled={isEnhancing || isGenerating}
               />
 
-              {isLoading ? (
+              {isEnhancing ? (
                 <Loader
                   style={{
                     position: "absolute",
@@ -102,7 +134,7 @@ const AIButton: React.FC = () => {
                   }}
                   onClick={() => enhancedPrompt(prompt)}
                   label="Enhance Prompt"
-                  disabled={isLoading}
+                  disabled={isEnhancing || prompt.length <= 10}
                 >
                   <Magic height={20} width={20} />
                 </IconButton>
@@ -111,18 +143,28 @@ const AIButton: React.FC = () => {
           </Modal.Body>
           <Modal.Footer>
             <Modal.Close>
-              <Button variant="tertiary">Cancel</Button>
+              <Button variant="tertiary" onClick={() => setIsOpen(false)}>Cancel</Button>
             </Modal.Close>
-            <Button>Confirm</Button>
+            <Button 
+              onClick={generateBlog}
+              disabled={isGenerating || prompt.length < 50}
+            >
+              {isGenerating ? 'Generating...' : 'Confirm'}
+            </Button>
           </Modal.Footer>
-          {error && (
+        </Modal.Content>
+      </Modal.Root>
+
+      {error && (
         <Alert style={{position:'fixed',top:'5px',right:'5px'}} closeLabel="Close" title="Error" variant="danger">
           {error}
         </Alert>
       )}
-        </Modal.Content>
-      </Modal.Root>
-     
+      {success && (
+        <Alert style={{position:'fixed',top:'5px',right:'5px'}} closeLabel="Close" title="Success" variant="success">
+          {success}
+        </Alert>
+      )}
     </>
   );
 };

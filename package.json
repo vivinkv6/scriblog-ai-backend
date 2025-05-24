@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@_sh/strapi-plugin-ckeditor": "^6.0.1",
+    "@google/genai": "^1.0.1",
     "@strapi/plugin-cloud": "5.13.0",
     "@strapi/plugin-users-permissions": "5.13.0",
     "@strapi/strapi": "5.13.0",

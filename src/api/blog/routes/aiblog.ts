@@ -18,6 +18,15 @@ export default {
         auth: false,
       }
     },
+    {
+      method: 'GET', 
+      path: '/blog/:slug',
+      handler: 'custom.findBySlug',
+      config: {
+        policies: [],
+        auth: false,
+      }
+    },
   
   ]
 }
