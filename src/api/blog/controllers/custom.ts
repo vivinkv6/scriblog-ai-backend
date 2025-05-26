@@ -6,7 +6,7 @@ export default {
   generateBlogByAI: async (ctx, next) => {
     try {
       const { prompt } = ctx.request.body;
-
+      
       if (!prompt) {
         return ctx.badRequest("Prompt is required");
       }
@@ -31,14 +31,15 @@ export default {
         "og_title": "",  
         "og_description": "",  
         "content": "",  
-        "category": "",  
+        "category": "", 
+        "category_image:"", 
         "bottom_description": ""  
       }  
       
       Instructions:  
       - Title should be relevant and engaging.  
       - Slug should be a URL-friendly version of the title (lowercase, hyphen-separated).  
-      - featured_image, banner_image, og_image should be links to **publicly available, royalty-free images** (no watermark), from sources like:
+      - featured_image, banner_image, og_image,category_image should be links to **publicly available, royalty-free images** (no watermark), from sources like:
         - Pexels (https://www.pexels.com)
         - Unsplash (https://unsplash.com)
         - Pixabay (https://pixabay.com)

@@ -10,6 +10,7 @@ import { unstable_useContentManagerContext as useContentManagerContext } from "@
 import { Modal } from "@strapi/design-system";
 import { Alien, Loader, Magic } from "@strapi/icons";
 import axios from "axios";
+import '/public/index.css'
 
 interface AIButtonProps {
   onClick: () => void;
@@ -39,13 +40,13 @@ const AIButton: React.FC = () => {
         "/api/blog/enhance-prompt",
         data
       );
-      console.log({generateUpdatedPrompt:generateUpdatedPrompt?.data});
-      
-      const extractMessage =generateUpdatedPrompt?.data?.data;
-      console.log({extractMessage});
+      console.log({ generateUpdatedPrompt: generateUpdatedPrompt?.data });
+
+      const extractMessage = generateUpdatedPrompt?.data?.data;
+      console.log({ extractMessage });
 
       setPrompt(extractMessage);
-      
+
       if (!extractMessage) {
         setError(generateUpdatedPrompt.data);
         return;
@@ -53,7 +54,7 @@ const AIButton: React.FC = () => {
     } catch (error: any) {
       setError(error?.message);
       setTimeout(() => {
-        setError('');
+        setError("");
       }, 5000);
       throw new Error(error);
     } finally {
@@ -65,52 +66,58 @@ const AIButton: React.FC = () => {
     try {
       setIsGenerating(true);
       const data = {
-        prompt: prompt
+        prompt: prompt,
       };
-      const response = await axios.post('/api/blog/generate', data);
+      const response = await axios.post("/api/blog/generate", data);
       if (response.data) {
-        console.log('Generated blog:', response.data?.data);
-        setSuccess('Blog Created Successfully');
+        console.log("Generated blog:", response.data?.data);
+        setSuccess("Blog Created Successfully");
         setTimeout(() => {
-          setSuccess('');
+          setSuccess("");
           setIsOpen(false);
         }, 3000);
-
-        window.location.reload();
+        console.log({response:response?.data?.data});
+        
+        window.location.href = `/admin/content-manager/collection-types/api::blog.blog/${response?.data?.data?.documentId}`;
+        // window.location.reload();
       } else {
-        setError('Failed to generate blog');
+        setError("Failed to generate blog");
       }
     } catch (error: any) {
-      setError(error?.message || 'An error occurred');
+      setError(error?.message || "An error occurred"); 
       setTimeout(() => {
-        setError('');
+        setError("");
       }, 5000);
     } finally {
       setIsGenerating(false);
     }
-  }
+  };
 
   if (model !== "api::blog.blog") return null;
   return (
     <>
-      <Modal.Root open={isOpen} defaultOpen={false}  onOpenChange={()=>setIsOpen(!isOpen)}>
+      <Modal.Root
+        open={isOpen}
+        defaultOpen={false}
+        onOpenChange={() => setIsOpen(!isOpen)}
+      >
         <Modal.Trigger onClick={() => setIsOpen(true)}>
-          <Button startIcon={<Alien />} >
-            Create with AI
-          </Button>
+          <Button startIcon={<Alien />}>Create with AI</Button>
         </Modal.Trigger>
-        <Modal.Content>
+        <Modal.Content style={{ height: "1000px" }}>
           <Modal.Header>
             <Modal.Title>Generate AI Blog Content</Modal.Title>
           </Modal.Header>
           <Modal.Body>
             <Field.Root style={{ position: "relative" }} name="name" required>
               <Field.Label>Enter Your Prompt Here</Field.Label>
+
               <Textarea
                 placeholder="Enter a detailed prompt to generate blog content (e.g., 'Write an article about AI trends in 2024')"
                 name="content"
                 value={prompt}
                 required
+                style={{ height: "100%" }}
                 onChange={(e) => setPrompt(e.target.value)}
                 disabled={isEnhancing || isGenerating}
               />
@@ -143,25 +150,37 @@ const AIButton: React.FC = () => {
           </Modal.Body>
           <Modal.Footer>
             <Modal.Close>
-              <Button variant="tertiary" onClick={() => setIsOpen(false)}>Cancel</Button>
+              <Button variant="tertiary" onClick={() => setIsOpen(false)}>
+                Cancel
+              </Button>
             </Modal.Close>
-            <Button 
+            <Button
               onClick={generateBlog}
               disabled={isGenerating || prompt.length < 50}
             >
-              {isGenerating ? 'Generating...' : 'Confirm'}
+              {isGenerating ? "Generating..." : "Confirm"}
             </Button>
           </Modal.Footer>
         </Modal.Content>
       </Modal.Root>
 
       {error && (
-        <Alert style={{position:'fixed',top:'5px',right:'5px'}} closeLabel="Close" title="Error" variant="danger">
+        <Alert
+          style={{ position: "fixed", top: "5px", right: "5px" }}
+          closeLabel="Close"
+          title="Error"
+          variant="danger"
+        >
           {error}
         </Alert>
       )}
       {success && (
-        <Alert style={{position:'fixed',top:'5px',right:'5px'}} closeLabel="Close" title="Success" variant="success">
+        <Alert
+          style={{ position: "fixed", top: "5px", right: "5px" }}
+          closeLabel="Close"
+          title="Success"
+          variant="success"
+        >
           {success}
         </Alert>
       )}

@@ -116,8 +116,8 @@ module.exports = createCoreService("api::blog.blog", ({ strapi }) => ({
       );
 
       const convertToObject = JSON.parse(cleanedJsonString);
-      console.log({convertToObject}); 
-      
+      console.log({ convertToObject });
+
       const featuredImageId = await uploadImage(
         convertToObject?.featured_image
       );
@@ -133,7 +133,31 @@ module.exports = createCoreService("api::blog.blog", ({ strapi }) => ({
           },
         });
 
+      if (findCategory) {
+        // Check if category has an image
+        if (!findCategory.Image) {
+          // Upload new category image if provided
+          const categoryImageId = await uploadImage(
+            convertToObject?.category_image
+          );
+
+          // Update category with new image
+          await strapi.documents("api::category.category").update({
+            documentId: findCategory.documentId,
+            data: {
+              Image: categoryImageId ? categoryImageId : "",
+            },
+            status: "published",
+          });
+        }
+      }
+
       if (!findCategory) {
+        const categoryImageId = await uploadImage(
+          convertToObject?.category_image
+        );
+        console.log({ categoryImageId });
+
         createCategory = await strapi
           .documents("api::category.category")
           .create({
@@ -143,6 +167,7 @@ module.exports = createCoreService("api::blog.blog", ({ strapi }) => ({
                 ?.toLowerCase()
                 .replace(/[^a-z0-9]+/g, "-")
                 .replace(/^-|-$/g, ""),
+              Image: categoryImageId ? categoryImageId : "",
             },
             status: "published",
           });
