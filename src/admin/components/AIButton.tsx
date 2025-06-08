@@ -10,7 +10,7 @@ import { unstable_useContentManagerContext as useContentManagerContext } from "@
 import { Modal } from "@strapi/design-system";
 import { Alien, Loader, Magic } from "@strapi/icons";
 import axios from "axios";
-import '/public/index.css'
+import "/public/index.css";
 
 interface AIButtonProps {
   onClick: () => void;
@@ -37,7 +37,7 @@ const AIButton: React.FC = () => {
         prompt: prompt,
       };
       const generateUpdatedPrompt = await axios.post(
-        "/api/blog/enhance-prompt",
+        "/api/blogs/enhance-prompt",
         data
       );
       console.log({ generateUpdatedPrompt: generateUpdatedPrompt?.data });
@@ -68,7 +68,7 @@ const AIButton: React.FC = () => {
       const data = {
         prompt: prompt,
       };
-      const response = await axios.post("/api/blog/generate", data);
+      const response = await axios.post("/api/blogs/generate", data);
       if (response.data) {
         console.log("Generated blog:", response.data?.data);
         setSuccess("Blog Created Successfully");
@@ -76,15 +76,20 @@ const AIButton: React.FC = () => {
           setSuccess("");
           setIsOpen(false);
         }, 3000);
-        console.log({response:response?.data?.data});
-        
-        window.location.href = `/admin/content-manager/collection-types/api::blog.blog/${response?.data?.data?.documentId}`;
+        console.log({ response: response?.data?.data });
+
+        if (response?.data?.data?.documentId) {
+          window.location.href = `/admin/content-manager/collection-types/api::blog.blog/${response?.data?.data?.documentId}`;
+          return;
+        }
+        setError("Failed to Generate Blog");
+
         // window.location.reload();
       } else {
-        setError("Failed to generate blog");
+        setError("Failed to Generate Blog");
       }
     } catch (error: any) {
-      setError(error?.message || "An error occurred"); 
+      setError(error?.message || "An error occurred");
       setTimeout(() => {
         setError("");
       }, 5000);
@@ -104,7 +109,7 @@ const AIButton: React.FC = () => {
         <Modal.Trigger onClick={() => setIsOpen(true)}>
           <Button startIcon={<Alien />}>Create with AI</Button>
         </Modal.Trigger>
-        <Modal.Content style={{ height: "1000px" }}>
+        <Modal.Content style={{ height: "500px" }}>
           <Modal.Header>
             <Modal.Title>Generate AI Blog Content</Modal.Title>
           </Modal.Header>
@@ -112,15 +117,43 @@ const AIButton: React.FC = () => {
             <Field.Root style={{ position: "relative" }} name="name" required>
               <Field.Label>Enter Your Prompt Here</Field.Label>
 
-              <Textarea
-                placeholder="Enter a detailed prompt to generate blog content (e.g., 'Write an article about AI trends in 2024')"
-                name="content"
-                value={prompt}
-                required
-                style={{ height: "100%" }}
-                onChange={(e) => setPrompt(e.target.value)}
-                disabled={isEnhancing || isGenerating}
-              />
+              <div 
+                style={{ 
+                  height: "25.5rem",
+                  outline: "none",
+                  boxShadow: "none",
+                  transitionProperty: "border-color, box-shadow, fill",
+                  transitionDuration: "0.2s",
+                  borderRadius: "4px",
+                  borderStyle: "solid",
+                  borderWidth: "1px",
+                  borderColor: "var(--border-color)",
+                  backgroundColor: "var(--background-color)"
+                }}
+              >
+                <textarea
+                  placeholder="Enter a detailed prompt to generate blog content (e.g., 'Write an article about AI trends in 2024')"
+                  name="content"
+                  value={prompt}
+                  required
+                  style={{ 
+                    height: "100%",
+                    width: "100%",
+                    padding: "8px",
+                    resize: "none",
+                    minHeight: "150px",
+                    outline: "none",
+                    boxShadow: "none",
+                    backgroundColor: "transparent",
+                    color: "var(--text-color)",
+                    border: "none",
+                    fontSize: "16px",
+                    lineHeight: "1.5"
+                  }}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  disabled={isEnhancing || isGenerating}
+                />
+              </div>
 
               {isEnhancing ? (
                 <Loader

@@ -9,81 +9,80 @@ const ai = new GoogleGenAI({
 });
 const axios = require("axios");
 module.exports = createCoreService("api::blog.blog", ({ strapi }) => ({
+  // download images and upload it to the media library
+  uploadImage: async (filePath, type: "CONTENT" | "IMAGE" = "IMAGE") => {
+    console.log({ filePath });
+
+    if (!filePath) return null;
+    try {
+      const cleanedPath = filePath?.trim().replaceAll(/ /g, "%20");
+      if (!cleanedPath) return null;
+
+      const response = await axios.get(`${cleanedPath}`, {
+        responseType: "arraybuffer",
+        timeout: 30000,
+        maxContentLength: 10 * 1024 * 1024,
+      });
+
+      const formData = new FormData();
+      const blob = new Blob([response.data], {
+        type: response.headers["content-type"] || "image/jpeg",
+      });
+      formData.append("files", blob, `image_${Date.now()}.jpg`);
+
+      const uploadResponse = await axios.post(
+        `${process.env.STRAPI_URL || "http://localhost:1337"}/api/upload`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+          timeout: 30000,
+        }
+      );
+      console.log({ uploadResponse: uploadResponse?.data[0] });
+
+      return type == "CONTENT"
+        ? uploadResponse.data[0] || null
+        : uploadResponse.data[0]?.id || null;
+    } catch (error) {
+      console.error("Error uploading image:", error.message);
+      return null;
+    }
+  },
+
+  // change the image path inside the content section
+
+  processContent: async (content) => {
+    if (!content) return "";
+    const imgRegex = /<img[^>]+src="([^"]+)"[^>]*>/g;
+    let match;
+    let processedContent = content;
+    const strapiUrl = process.env.STRAPI_URL || "http://localhost:1337";
+
+    while ((match = imgRegex.exec(content)) !== null) {
+      const originalUrl = match[1];
+      console.log({ originalUrl });
+
+      // Skip if the URL already contains STRAPI_URL
+      if (originalUrl.includes(strapiUrl)) {
+        continue;
+      }
+      console.log(originalUrl);
+
+      const uploadedImage = await strapi
+        .service("api::blog.custom")
+        .uploadImage(originalUrl, "CONTENT");
+      console.log({ uploadedImage });
+
+      if (uploadedImage) {
+        const newUrl = `${strapiUrl}${uploadedImage.url}`;
+        processedContent = processedContent.replace(originalUrl, newUrl);
+      }
+    }
+    return processedContent;
+  },
+
   createAIBlog: async (prompt: string) => {
     try {
-      // download images and upload it to the media library
-      const uploadImage = async (
-        filePath,
-        type: "CONTENT" | "IMAGE" = "IMAGE"
-      ) => {
-        console.log({ filePath });
-
-        if (!filePath) return null;
-        try {
-          const cleanedPath = filePath?.trim().replaceAll(/ /g, "%20");
-          if (!cleanedPath) return null;
-
-          const response = await axios.get(`${cleanedPath}`, {
-            responseType: "arraybuffer",
-            timeout: 30000,
-            maxContentLength: 10 * 1024 * 1024,
-          });
-
-          const formData = new FormData();
-          const blob = new Blob([response.data], {
-            type: response.headers["content-type"] || "image/jpeg",
-          });
-          formData.append("files", blob, `image_${Date.now()}.jpg`);
-
-          const uploadResponse = await axios.post(
-            `${process.env.STRAPI_URL || "http://localhost:1337"}/api/upload`,
-            formData,
-            {
-              headers: { "Content-Type": "multipart/form-data" },
-              timeout: 30000,
-            }
-          );
-          console.log({ uploadResponse: uploadResponse?.data[0] });
-
-          return type == "CONTENT"
-            ? uploadResponse.data[0] || null
-            : uploadResponse.data[0]?.id || null;
-        } catch (error) {
-          console.error("Error uploading image:", error.message);
-          return null;
-        }
-      };
-
-      // change the image path inside the content section
-
-      const processContent = async (content) => {
-        if (!content) return "";
-        const imgRegex = /<img[^>]+src="([^"]+)"[^>]*>/g;
-        let match;
-        let processedContent = content;
-        const strapiUrl = process.env.STRAPI_URL || "http://localhost:1337";
-
-        while ((match = imgRegex.exec(content)) !== null) {
-          const originalUrl = match[1];
-          console.log({ originalUrl });
-
-          // Skip if the URL already contains STRAPI_URL
-          if (originalUrl.includes(strapiUrl)) {
-            continue;
-          }
-          console.log(originalUrl);
-
-          const uploadedImage = await uploadImage(originalUrl, "CONTENT");
-          console.log({ uploadedImage });
-
-          if (uploadedImage) {
-            const newUrl = `${strapiUrl}${uploadedImage.url}`;
-            processedContent = processedContent.replace(originalUrl, newUrl);
-          }
-        }
-        return processedContent;
-      };
-
       const response = await ai.models.generateContent({
         model: "gemini-2.0-flash",
         contents: prompt,
@@ -118,12 +117,18 @@ module.exports = createCoreService("api::blog.blog", ({ strapi }) => ({
       const convertToObject = JSON.parse(cleanedJsonString);
       console.log({ convertToObject });
 
-      const featuredImageId = await uploadImage(
-        convertToObject?.featured_image
-      );
-      const bannerImageId = await uploadImage(convertToObject?.banner_image);
-      const ogImageId = await uploadImage(convertToObject?.og_image);
-      const updatedContent = await processContent(convertToObject?.content);
+      const featuredImageId = await strapi
+        .service("api::blog.custom")
+        .uploadImage(convertToObject?.featured_image);
+      const bannerImageId = await strapi
+        .service("api::blog.custom")
+        .uploadImage(convertToObject?.banner_image);
+      const ogImageId = await strapi
+        .service("api::blog.custom")
+        .uploadImage(convertToObject?.og_image);
+      const updatedContent = await strapi
+        .service("api::blog.custom")
+        .processContent(convertToObject?.content);
       let createCategory;
       const findCategory = await strapi
         .documents("api::category.category")
@@ -137,9 +142,9 @@ module.exports = createCoreService("api::blog.blog", ({ strapi }) => ({
         // Check if category has an image
         if (!findCategory.Image) {
           // Upload new category image if provided
-          const categoryImageId = await uploadImage(
-            convertToObject?.category_image
-          );
+          const categoryImageId = await strapi
+            .service("api::blog.custom")
+            .uploadImage(convertToObject?.category_image);
 
           // Update category with new image
           await strapi.documents("api::category.category").update({
@@ -153,9 +158,9 @@ module.exports = createCoreService("api::blog.blog", ({ strapi }) => ({
       }
 
       if (!findCategory) {
-        const categoryImageId = await uploadImage(
-          convertToObject?.category_image
-        );
+        const categoryImageId = await strapi
+          .service("api::blog.custom")
+          .uploadImage(convertToObject?.category_image);
         console.log({ categoryImageId });
 
         createCategory = await strapi
@@ -168,6 +173,7 @@ module.exports = createCoreService("api::blog.blog", ({ strapi }) => ({
                 .replace(/[^a-z0-9]+/g, "-")
                 .replace(/^-|-$/g, ""),
               Image: categoryImageId ? categoryImageId : "",
+              Short_Description: convertToObject?.category_short_description,
             },
             status: "published",
           });
@@ -186,6 +192,7 @@ module.exports = createCoreService("api::blog.blog", ({ strapi }) => ({
             ? findCategory?.documentId
             : createCategory?.documentId,
           content: convertToObject?.content,
+          Tags: convertToObject?.tags,
           SEO: {
             Bottom_Description: convertToObject?.bottom_description,
             Meta_Title: convertToObject?.meta_title,

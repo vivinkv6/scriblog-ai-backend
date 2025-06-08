@@ -50,13 +50,17 @@
     },
     "Category": {
       "type": "relation",
-      "relation": "oneToOne",
-      "target": "api::category.category"
+      "relation": "manyToOne",
+      "target": "api::category.category",
+      "inversedBy": "Blogs"
     },
     "SEO": {
       "type": "component",
       "repeatable": false,
       "component": "seo.seo"
+    },
+    "Tags": {
+      "type": "text"
     }
   }
 }

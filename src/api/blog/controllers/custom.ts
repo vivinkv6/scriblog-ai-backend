@@ -6,7 +6,7 @@ export default {
   generateBlogByAI: async (ctx, next) => {
     try {
       const { prompt } = ctx.request.body;
-      
+
       if (!prompt) {
         return ctx.badRequest("Prompt is required");
       }
@@ -33,17 +33,19 @@ export default {
         "content": "",  
         "category": "", 
         "category_image:"", 
-        "bottom_description": ""  
+        "category_short_description:"",
+        "bottom_description": "",
+        "tags":""  
       }  
       
       Instructions:  
-      - Title should be relevant and engaging.  
+      - Title should be small or short, relevant and engaging.  
       - Slug should be a URL-friendly version of the title (lowercase, hyphen-separated).  
       - featured_image, banner_image, og_image,category_image should be links to **publicly available, royalty-free images** (no watermark), from sources like:
         - Pexels (https://www.pexels.com)
         - Unsplash (https://unsplash.com)
         - Pixabay (https://pixabay.com)
-        - Wikimedia Commons (for logos or tech-specific graphics)
+        - Wikimedia,wikipedia Commons (for logos or tech-specific graphics)
         - Official websites or GitHub repositories (for open-source project logos, if allowed under license)  
       - For programming/tech topics (like JavaScript, Node.js, React, Python, etc.), ensure the image is relevant to the topic — e.g.,:
         - A screenshot, logo, code editor mockup, UI wireframe, or abstract tech background.  
@@ -111,6 +113,7 @@ Return the response as a JSON object like this:
         data: aiResponse,
       });
     } catch (err) {
+      ctx.status = 500;
       ctx.body = err;
     }
   },
@@ -123,12 +126,63 @@ Return the response as a JSON object like this:
         filters: {
           Slug: slug,
         },
-        status:'published',
-        populate: ["Banner_Image", "Category", "Featured_Image", "SEO"],
+        status: "published",
+        populate: [
+          "Banner_Image",
+          "Category",
+          "Featured_Image",
+          "SEO",
+          "SEO.OG_Image",
+        ],
       });
 
-      ctx.body = findBlog;
+      if (!findBlog) {
+        ctx.status = 404;
+        ctx.body = {
+          message: "Blog Not Found",
+        };
+        return;
+      }
+      ctx.status = 200;
+      ctx.body = {
+        data: findBlog,
+      };
     } catch (error) {
+      ctx.status = 500;
+      ctx.body = error;
+    }
+  },
+
+  fetchAllBlogs: async (ctx, next) => {
+    try {
+      const { page = 1, limit = 10 } = ctx.query;
+      const skip = (page - 1) * limit;
+      const fetchBlogs = await strapi.documents("api::blog.blog").findMany({
+        start: skip,
+        limit: limit,
+        populate: ["Category", "Featured_Image"],
+        sort: "createdAt:desc",
+        status: "published",
+      });
+
+      const total = await strapi
+        .documents("api::blog.blog")
+        .count({ status: "published" });
+      const pageCount = Math.ceil(total / limit);
+
+      ctx.body = {
+        data: fetchBlogs,
+        meta: {
+          pagination: {
+            page: Number(page),
+            pageSize: Number(limit),
+            pageCount,
+            total,
+          },
+        },
+      };
+    } catch (error) {
+      ctx.status = 500;
       ctx.body = error;
     }
   },

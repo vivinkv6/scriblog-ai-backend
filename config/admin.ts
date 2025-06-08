@@ -1,15 +1,19 @@
 
 const getPreviewPathname = (uid, { locale, document }): string => {
-  const { slug } = document;
+  const { Slug } = document;
+  console.log('Preview Path name');
+  
+  console.log({document,uid}); 
+  
   
   // Handle different content types with their specific URL patterns
   switch (uid) {
     // Handle blog articles
     case "api::blog.blog":
-      if (!slug) {
-        return "/blog"; // Blog listing page if no slug
+      if (!Slug) { 
+        return "/blog"; // Blog listing page if no Slug
       }
-      return `/blog/${slug}`; // Individual blog article page
+      return `/blog/${Slug}`; // Individual blog article page
     default:
       return null; // Return null for unsupported content types
   }
@@ -38,26 +42,26 @@ export default ({ env }) => {
       nps: env.bool('FLAG_NPS', true),
       promoteEE: env.bool('FLAG_PROMOTE_EE', true),
     },
-    // preview: {
-    //   enabled: true,
-    //   config: {
-    //     allowedOrigins: clientUrl,
-    //     async handler(uid, { documentId, locale, status }) {
-    //       const document = await strapi.documents(uid).findOne({ documentId });
-    //       const pathname = getPreviewPathname(uid, { locale, document });
+    preview: {
+      enabled: true,
+      config: {
+        allowedOrigins: clientUrl,
+        async handler(uid, { documentId, locale, status }) {
+          const document = await strapi.documents(uid).findOne({ documentId });
+          const pathname = getPreviewPathname(uid, { locale, document });
 
-    //       if (!pathname) {
-    //         return null;
-    //       }
+          if (!pathname) {
+            return null;
+          }
 
-    //       const urlSearchParams = new URLSearchParams({
-    //         url: pathname,
-    //         secret: previewSecret,
-    //         status,
-    //       });
-    //       return `${clientUrl}/api/preview?${urlSearchParams}`;
-    //     },
-    //   },
-    // },
+          const urlSearchParams = new URLSearchParams({
+            url: pathname,
+            secret: previewSecret,
+            status,
+          });
+          return `${clientUrl}/api/preview?${urlSearchParams}`;
+        },
+      },
+    },
   };
 };
